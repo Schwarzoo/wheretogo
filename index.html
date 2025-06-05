@@ -203,6 +203,7 @@
     // 2) RILEVAZIONE POSIZIONE
     // ================================
     function getUserLocation() {
+      // Chiediamo la posizione ad ogni caricamento
       if (!navigator.geolocation) {
         showError("Geolocalizzazione non supportata dal browser.");
         return;
@@ -211,11 +212,13 @@
         position => {
           userLat = position.coords.latitude;
           userLon = position.coords.longitude;
-          document.getElementById("loading").style.display = "none";
-          document.getElementById("inputSection").style.display = "block";
+          loadingDiv.style.display    = "none";
+          inputSection.style.display  = "block";
         },
         err => {
-          showError("Impossibile ottenere la posizione: " + err.message);
+          // Se l'utente rifiuta o c'è un errore, mostriamo messaggio
+          showError("Permesso geolocalizzazione negato o non disponibile.");
+          loadingDiv.style.display    = "none";
         },
         {
           enableHighAccuracy: true,
@@ -284,10 +287,8 @@
           distance: haversineDistance(userLat, userLon, p.lat, p.lon)
         }));
 
-        // Ordino per distanza crescente
+        // Ordino per distanza crescente e mostro tutte
         placesWithDist.sort((a, b) => a.distance - b.distance);
-
-        // Mostro tutte le località trovate (senza limiti)
         processWeatherForPlaces(placesWithDist);
       } catch (err) {
         console.error(err);
@@ -305,18 +306,16 @@
 
       // Rimuovo eventuali risposte null (se il fetch meteo è fallito)
       const placesWithWeather = results.filter(item => item !== null);
-
       allPlacesWithWeather = placesWithWeather; // memorizzo globalmente
 
       document.getElementById("overpass-loading").style.display = "none";
-
       if (placesWithWeather.length === 0) {
         showError("Impossibile recuperare il meteo per le località vicine.");
         return;
       }
 
       // Rendo visibile la sezione filtri
-      document.getElementById("filterSection").style.display = "block";
+      document.getElementById("filterSection").style.display = "flex";
 
       // Mostro inizialmente tutte le località
       renderResults(allPlacesWithWeather);
@@ -451,9 +450,10 @@
     }
 
     // ================================
-    // 11) AVVIO DELL’APP
+    // 11) AVVIO DELL’APP: chiediamo sempre
     // ================================
     window.addEventListener("load", () => {
+      // Forziamo la richiesta di permesso alla geolocalizzazione
       getUserLocation();
     });
   </script>
