@@ -206,25 +206,36 @@
       // Chiediamo la posizione ad ogni caricamento
       if (!navigator.geolocation) {
         showError("Geolocalizzazione non supportata dal browser.");
+        loadingVisible(false);
         return;
       }
       navigator.geolocation.getCurrentPosition(
         position => {
           userLat = position.coords.latitude;
           userLon = position.coords.longitude;
-          loadingDiv.style.display    = "none";
-          inputSection.style.display  = "block";
+          loadingVisible(false);
+          inputSectionVisible(true);
         },
         err => {
-          // Se l'utente rifiuta o c'è un errore, mostriamo messaggio
+          // Se l'utente rifiuta o c'è un errore, mostriamo messaggio e sblocchiamo form
           showError("Permesso geolocalizzazione negato o non disponibile.");
-          loadingDiv.style.display    = "none";
+          loadingVisible(false);
+          inputSectionVisible(true);
         },
         {
           enableHighAccuracy: true,
           timeout: 10000
         }
       );
+    }
+
+    // Controlla visibilità del loading
+    function loadingVisible(yes) {
+      document.getElementById("loading").style.display = yes ? "block" : "none";
+    }
+    // Controlla visibilità del form raggio
+    function inputSectionVisible(yes) {
+      document.getElementById("inputSection").style.display = yes ? "flex" : "none";
     }
 
     // ================================
@@ -287,8 +298,10 @@
           distance: haversineDistance(userLat, userLon, p.lat, p.lon)
         }));
 
-        // Ordino per distanza crescente e mostro tutte
+        // Ordino per distanza crescente
         placesWithDist.sort((a, b) => a.distance - b.distance);
+
+        // Mostro tutte le località trovate (senza limiti)
         processWeatherForPlaces(placesWithDist);
       } catch (err) {
         console.error(err);
@@ -306,6 +319,7 @@
 
       // Rimuovo eventuali risposte null (se il fetch meteo è fallito)
       const placesWithWeather = results.filter(item => item !== null);
+
       allPlacesWithWeather = placesWithWeather; // memorizzo globalmente
 
       document.getElementById("overpass-loading").style.display = "none";
@@ -453,7 +467,6 @@
     // 11) AVVIO DELL’APP: chiediamo sempre
     // ================================
     window.addEventListener("load", () => {
-      // Forziamo la richiesta di permesso alla geolocalizzazione
       getUserLocation();
     });
   </script>
