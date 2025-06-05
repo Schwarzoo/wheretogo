@@ -142,9 +142,8 @@
     const OPENWEATHERMAP_API_KEY = "05801df6ce78bcc792e3a3dd95dab0a9";
     const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
     const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-    const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse?format=json";
 
-    let userLat = null, userLon = null, userName = "La tua posizione";
+    let userLat = null, userLon = null;
 
     // ================================
     // 2) RILEVAZIONE POSIZIONE
@@ -155,12 +154,9 @@
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        async position => {
+        position => {
           userLat = position.coords.latitude;
           userLon = position.coords.longitude;
-          // Ottieni nome località con reverse geocoding
-          await fetchUserLocationName();
-          // Nascondi "Sto rilevando…" e mostra il form
           document.getElementById("loading").style.display = "none";
           document.getElementById("inputSection").style.display = "block";
         },
@@ -172,28 +168,6 @@
           timeout: 10000
         }
       );
-    }
-
-    // ================================
-    // 2.bis) REVERSE GEOCODING CON NOMINATIM
-    // ================================
-    async function fetchUserLocationName() {
-      try {
-        const resp = await fetch(`${NOMINATIM_URL}&lat=${userLat}&lon=${userLon}`);
-        if (!resp.ok) throw new Error("Errore reverse geocoding");
-        const data = await resp.json();
-        // Preferiamo city/town/village, altrimenti display_name
-        if (data.address) {
-          userName =
-            data.address.city ||
-            data.address.town ||
-            data.address.village ||
-            data.display_name ||
-            userName;
-        }
-      } catch (err) {
-        console.warn("Reverse geocoding fallito, userName rimane generico.", err);
-      }
     }
 
     // ================================
@@ -258,15 +232,11 @@
         // Ordino per distanza crescente
         placesWithDist.sort((a, b) => a.distance - b.distance);
 
-        // Creo array contenente prima la tua posizione e poi le prime 9 località vicine
-        // (se non ci sono almeno 9, prendo comunque quante ne trovo)
-        const nearestLocalities = [
-          { name: userName, lat: userLat, lon: userLon, distance: 0 },
-          ...placesWithDist.slice(0, 9)
-        ];
+        // Prendo le prime 10 (le più vicine)
+        const nearest10 = placesWithDist.slice(0, 10);
 
-        // Ora recupero il meteo per ciascuna di queste località
-        processWeatherForPlaces(nearestLocalities);
+        // Ora recupero il meteo per ciascuna delle prime 10
+        processWeatherForPlaces(nearest10);
       } catch (err) {
         console.error(err);
         showError("Errore durante la ricerca delle località. Riprova più tardi.");
@@ -278,14 +248,15 @@
     // 5) PER OGNI LOCALITÀ: METEO (senza filtro di temperatura)
     // ================================
     async function processWeatherForPlaces(placesArray) {
-      // Faccio una fetch meteo per ciascuna delle località (prima è la tua)
+      // Faccio una fetch meteo per ciascuna delle prime 10 località
       const promises = placesArray.map(p => fetchWeatherForPlace(p));
       const results = await Promise.all(promises);
 
-      // Rimuovo eventuali risposte null (se il fetch meteo è fallito per qualcuno)
+      // Rimuovo eventuali risposte null (se il fetch meteo è fallito)
       const placesWithWeather = results
         .filter(item => item !== null)
-        // Non serve riordinare qui, perché l'array era già ordinato per distanza (0 + le più vicine)
+        // Qui NON ho bisogno di ordinare di nuovo per distanza, perché è già ordinato
+        // placesWithWeather.sort((a, b) => a.distance - b.distance);
 
       document.getElementById("overpass-loading").style.display = "none";
 
@@ -294,7 +265,7 @@
         return;
       }
 
-      // Rendering finale in ordine di distanza crescente (la tua posizione ha distance=0)
+      // Rendering finale in ordine di distanza crescente
       renderResults(placesWithWeather);
     }
 
@@ -331,7 +302,7 @@
       const container = document.getElementById("results");
       container.innerHTML = "";
 
-      // list è ordinata per distanza crescente (la prima posizione è la tua)
+      // list è già ordinata per distanza crescente
       list.forEach(item => {
         const card = document.createElement("div");
         card.className = "card";
