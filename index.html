@@ -1,266 +1,338 @@
 <!DOCTYPE html>
 <html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Località con Meteo Vicine a Te</title>
-  <style>
-    /* Reset base */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      color: #333;
-      line-height: 1.6;
-      padding: 0 0.5rem;
-    }
-    header {
-      background: #0275d8;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    header h1 {
-      font-size: 1.5rem;
-    }
-    main {
-      max-width: 800px;
-      margin: 1rem auto;
-      padding: 0 0.5rem;
-    }
-    .input-container,
-    .filter-container {
-      background: white;
-      padding: 1rem;
-      border-radius: 6px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .input-container label,
-    .filter-container label {
-      font-weight: bold;
-      flex: 0 0 auto;
-    }
-    .input-container input[type="number"] {
-      width: 80px;
-      padding: 0.5rem;
-      flex: 0 0 auto;
-    }
-    .input-container button,
-    .filter-container button {
-      padding: 0.5rem 1rem;
-      background: #0275d8;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      flex: 0 0 auto;
-    }
-    .input-container button:hover,
-    .filter-container button:hover {
-      background: #025aa5;
-    }
-    #filterSection {
-      display: none;
-    }
-    #loading,
-    #overpass-loading {
-      text-align: center;
-      margin-top: 1rem;
-      font-size: 1.1rem;
-    }
-    #error {
-      color: red;
-      text-align: center;
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-    .card {
-      background: white;
-      border-radius: 6px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-bottom: 1rem;
-      overflow: hidden;
-      width: 100%;
-    }
-    .card-header {
-      background: #eee;
-      padding: 0.75rem 1rem;
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .card-header span {
-      flex: 1 1 auto;
-      margin: 0.25rem 0;
-    }
-    .card-body {
-      padding: 1rem;
-    }
-    .card-body p {
-      margin-bottom: 0.5rem;
-    }
-    .card-body a {
-      display: inline-block;
-      margin-top: 0.5rem;
-      text-decoration: none;
-      color: #0275d8;
-    }
-    .card-body a:hover {
-      text-decoration: underline;
-    }
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.9rem;
-      color: #555;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 600px) {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Località con Meteo, Mappa e Cose da Fare</title>
+    <style>
+      /* Reset base */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+        padding: 0 0.5rem;
+      }
+      header {
+        background: #0275d8;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+      }
+      header h1 {
+        font-size: 1.5rem;
+      }
+      main {
+        max-width: 800px;
+        margin: 1rem auto;
+        padding: 0 0.5rem;
+      }
       .input-container,
       .filter-container {
-        flex-direction: column;
-        align-items: stretch;
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
       }
-      .input-container input[type="number"],
+      .input-container label,
+      .filter-container label {
+        font-weight: bold;
+        flex: 0 0 auto;
+      }
+      .input-container input[type="number"] {
+        width: 80px;
+        padding: 0.5rem;
+        flex: 0 0 auto;
+      }
       .input-container button,
       .filter-container button {
+        padding: 0.5rem 1rem;
+        background: #0275d8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        flex: 0 0 auto;
+      }
+      .input-container button:hover,
+      .filter-container button:hover {
+        background: #025aa5;
+      }
+      #filterSection {
+        display: none;
+      }
+      #loading,
+      #overpass-loading {
+        text-align: center;
+        margin-top: 1rem;
+        font-size: 1.1rem;
+      }
+      #error {
+        color: red;
+        text-align: center;
+        margin-top: 1rem;
+        font-weight: bold;
+      }
+      .card {
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        overflow: hidden;
         width: 100%;
-        margin: 0.25rem 0;
       }
       .card-header {
-        flex-direction: column;
-        align-items: flex-start;
+        background: #eee;
+        padding: 0.75rem 1rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
       }
       .card-header span {
+        flex: 1 1 auto;
+        margin: 0.25rem 0;
+      }
+      .card-body {
+        padding: 1rem;
+      }
+      .card-body p {
+        margin-bottom: 0.5rem;
+      }
+      .map-iframe {
         width: 100%;
+        height: 200px;
+        border: none;
+        border-radius: 4px;
+        margin-top: 0.5rem;
       }
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Località con Meteo Vicine a Te</h1>
-  </header>
-
-  <main>
-    <!-- Messaggio iniziale in attesa di posizione -->
-    <div id="loading">Sto rilevando la tua posizione…</div>
-    <div id="error"></div>
-
-    <!-- Form per inserire il raggio di ricerca (in km) -->
-    <div id="inputSection" class="input-container" style="display: none;">
-      <label for="radius">Raggio di ricerca (km):</label>
-      <input id="radius" type="number" value="50" min="1" max="200" />
-      <button id="searchBtn">Cerca</button>
-    </div>
-
-    <!-- Form per filtrare per condizione meteo -->
-    <div id="filterSection" class="filter-container">
-      <label>Filtra per condizione:</label>
-      <button id="btn-all">Tutti</button>
-      <button id="btn-clear">Sereno</button>
-      <button id="btn-clouds">Nuvoloso</button>
-      <button id="btn-rain">Pioggia</button>
-      <button id="btn-snow">Neve</button>
-      <button id="btn-other">Altro</button>
-    </div>
-
-    <!-- Messaggio di caricamento Overpass -->
-    <div id="overpass-loading" style="display: none;">Sto cercando località vicine…</div>
-
-    <!-- Contenitore risultati -->
-    <div id="results"></div>
-  </main>
-
-  <footer>
-    &copy; 2025 • Demo “Località con Meteo”
-  </footer>
-
-  <script>
-    // ================================
-    // 1) CONFIGURAZIONE INIZIALE
-    // ================================
-    const OPENWEATHERMAP_API_KEY = "05801df6ce78bcc792e3a3dd95dab0a9";
-    const WEATHER_API_URL      = "https://api.openweathermap.org/data/2.5/weather";
-    const OVERPASS_URL         = "https://overpass-api.de/api/interpreter";
-
-    let userLat = null, userLon = null;
-    let allPlacesWithWeather = []; // Array globale per memorizzare i risultati
-
-    // ================================
-    // 2) RILEVAZIONE POSIZIONE
-    // ================================
-    function getUserLocation() {
-      // Chiediamo la posizione ad ogni caricamento
-      if (!navigator.geolocation) {
-        showError("Geolocalizzazione non supportata dal browser.");
-        loadingVisible(false);
-        return;
+      .poi-list {
+        margin-top: 0.5rem;
+        list-style-type: none;
+        padding-left: 0;
       }
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          userLat = position.coords.latitude;
-          userLon = position.coords.longitude;
-          loadingVisible(false);
-          inputSectionVisible(true);
-        },
-        err => {
-          // Se l'utente rifiuta o c'è un errore, mostriamo messaggio e sblocchiamo form
-          showError("Permesso geolocalizzazione negato o non disponibile.");
-          loadingVisible(false);
-          inputSectionVisible(true);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000
+      .poi-list li {
+        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+        cursor: pointer;
+        padding: 0.3rem;
+        border-bottom: 1px solid #ddd;
+      }
+      .poi-list li:hover {
+        background-color: #f0f0f0;
+      }
+      .place-details {
+        background: #fafafa;
+        border-left: 3px solid #0275d8;
+        margin: 0.25rem 0 0.5rem 1rem;
+        padding: 0.5rem;
+        display: none;
+        font-size: 0.9rem;
+        color: #555;
+      }
+      .show-poi-btn {
+        margin-top: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #0275d8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .show-poi-btn:hover {
+        background: #025aa5;
+      }
+      footer {
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.9rem;
+        color: #555;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 600px) {
+        .input-container,
+        .filter-container {
+          flex-direction: column;
+          align-items: stretch;
         }
-      );
-    }
-
-    // Controlla visibilità del loading
-    function loadingVisible(yes) {
-      document.getElementById("loading").style.display = yes ? "block" : "none";
-    }
-    // Controlla visibilità del form raggio
-    function inputSectionVisible(yes) {
-      document.getElementById("inputSection").style.display = yes ? "flex" : "none";
-    }
-
-    // ================================
-    // 3) GESTIONE CLICK “Cerca”
-    // ================================
-    document.getElementById("searchBtn").addEventListener("click", () => {
-      const radiusKm = parseInt(document.getElementById("radius").value);
-      if (isNaN(radiusKm) || radiusKm < 1) {
-        showError("Inserisci un raggio da 1 a 200 km.");
-        return;
+        .input-container input[type="number"],
+        .input-container button,
+        .filter-container button {
+          width: 100%;
+          margin: 0.25rem 0;
+        }
+        .card-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .card-header span {
+          width: 100%;
+        }
+        .map-iframe {
+          height: 180px;
+        }
       }
-      clearMessages();
-      searchNearbyPlaces(radiusKm);
-    });
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Località con Meteo, Mappa e Cose da Fare</h1>
+    </header>
 
-    // ================================
-    // 4) CERCA LOCALITÀ VICINE (Overpass)
-    // ================================
-    async function searchNearbyPlaces(radiusKm) {
-      document.getElementById("filterSection").style.display = "none";
-      document.getElementById("overpass-loading").style.display = "block";
-      document.getElementById("results").innerHTML = "";
+    <main>
+      <!-- Messaggio iniziale in attesa di posizione -->
+      <div id="loading">Sto rilevando la tua posizione…</div>
+      <div id="error"></div>
 
-      const radiusM = radiusKm * 1000;
-      const query = `
+      <!-- Form per inserire il raggio di ricerca (in km) -->
+      <div id="inputSection" class="input-container" style="display: none">
+        <label for="radius">Raggio di ricerca (km):</label>
+        <input id="radius" type="number" value="50" min="1" max="200" />
+        <button id="searchBtn">Cerca</button>
+      </div>
+
+      <!-- Form per filtrare per condizione meteo -->
+      <div id="filterSection" class="filter-container">
+        <label>Filtra per condizione:</label>
+        <button id="btn-all">Tutti</button>
+        <button id="btn-clear">Sereno</button>
+        <button id="btn-clouds">Nuvoloso</button>
+        <button id="btn-rain">Pioggia</button>
+        <button id="btn-snow">Neve</button>
+        <button id="btn-other">Altro</button>
+      </div>
+
+      <!-- Messaggio di caricamento Overpass -->
+      <div id="overpass-loading" style="display: none">
+        Sto cercando località vicine…
+      </div>
+
+      <!-- Contenitore risultati -->
+      <div id="results"></div>
+    </main>
+
+    <footer>&copy; 2025 • Demo “Località con Meteo”</footer>
+
+    <script>
+      // ================================
+      // 1) CONFIGURAZIONE INIZIALE
+      // ================================
+      const OPENWEATHERMAP_API_KEY = "05801df6ce78bcc792e3a3dd95dab0a9";
+      const GOOGLE_MAPS_EMBED_KEY = "AIzaSyBPO2VO70ik7N0Euo19bYnz2Why-6mNrJ8";
+      const GOOGLE_PLACES_API_KEY = "AIzaSyBPO2VO70ik7N0Euo19bYnz2Why-6mNrJ8";
+      const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
+      const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+
+      // ================================
+      // [AGGIUNTA] 0) MAPPA METEO → TYPE DI PLACES
+      // ================================
+
+      // Per ogni condizione “main” di OpenWeather (Clear, Rain, Clouds, ecc.),
+      // restituisce un array di "type" validi per Google Places Nearby Search.
+      // Puoi aggiungere/rimuovere categorie a piacere.
+      const weatherToTypes = {
+        Clear: ["park", "tourist_attraction", "beach"], // Sole → parchi, attrazioni all'aperto, spiagge
+        Clouds: ["tourist_attraction", "cafe", "outdoor_market"], // Nuvoloso → attrazioni miste
+        Rain: ["museum", "shopping_mall", "movie_theater"], // Pioggia → indoor
+        Drizzle: ["cafe", "museum", "shopping_mall"], // Pioggerellina → indoor/ibrido
+        Thunderstorm: ["movie_theater", "shopping_mall"], // Temporale → indoor
+        Snow: ["ski_resort", "ice_skating_rink"], // Neve → piste da sci, pattinaggio
+        Mist: ["library", "indoor_playground"], // Foschia → indoor
+        Fog: ["library", "indoor_playground"], // Idem Mist
+        Haze: ["library", "indoor_playground"], // Idem Mist
+        Smoke: ["museum", "library"], // Fumo/polveri → indoor
+        Dust: ["museum", "library"], // Particelle → indoor
+        Sand: ["museum", "library"], // Sabbia → indoor
+        Ash: ["museum", "library"], // Cenere vulcanica → indoor
+        Squall: ["movie_theater", "shopping_mall"], // Burrasca → indoor
+        Tornado: ["movie_theater", "shopping_mall"], // Tornado → indoor
+      };
+
+      // Funzione helper: dato weatherMain (es. "Clear", "Rain"), restituisce l'array di type.
+      // Se non riconosce il valore, ritorna almeno ["tourist_attraction"] come fallback.
+      function getTypesForWeather(mainCond) {
+        return weatherToTypes[mainCond] || ["tourist_attraction"];
+      }
+
+      let userLat = null,
+        userLon = null;
+      let allPlacesWithWeather = []; // memorizza i risultati meteo per i filtri
+
+      // ================================
+      // 2) RILEVAZIONE POSIZIONE
+      // ================================
+      function getUserLocation() {
+        if (!navigator.geolocation) {
+          showError("Geolocalizzazione non supportata dal browser.");
+          loadingVisible(false);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userLat = position.coords.latitude;
+            userLon = position.coords.longitude;
+            loadingVisible(false);
+            inputSectionVisible(true);
+          },
+          (err) => {
+            // Se l'utente rifiuta o c'è un errore, sblocchiamo comunque il form
+            showError("Permesso geolocalizzazione negato o non disponibile.");
+            loadingVisible(false);
+            inputSectionVisible(true);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+          }
+        );
+      }
+
+      function loadingVisible(yes) {
+        document.getElementById("loading").style.display = yes
+          ? "block"
+          : "none";
+      }
+      function inputSectionVisible(yes) {
+        document.getElementById("inputSection").style.display = yes
+          ? "flex"
+          : "none";
+      }
+
+      // ================================
+      // 3) GESTIONE CLICK “Cerca”
+      // ================================
+      document.getElementById("searchBtn").addEventListener("click", () => {
+        const radiusKm = parseInt(document.getElementById("radius").value);
+        if (isNaN(radiusKm) || radiusKm < 1) {
+          showError("Inserisci un raggio da 1 a 200 km.");
+          return;
+        }
+        clearMessages();
+        searchNearbyPlaces(radiusKm);
+      });
+
+      // ================================
+      // 4) RICERCA LOCALITÀ VICINE (Overpass)
+      // ================================
+      async function searchNearbyPlaces(radiusKm) {
+        document.getElementById("filterSection").style.display = "none";
+        document.getElementById("overpass-loading").style.display = "block";
+        document.getElementById("results").innerHTML = "";
+
+        const radiusM = radiusKm * 1000;
+        const query = `
         [out:json][timeout:25];
         (
           node["place"~"city|town|village"](around:${radiusM},${userLat},${userLon});
@@ -268,207 +340,513 @@
         out center;
       `.trim();
 
-      try {
-        const response = await fetch(OVERPASS_URL, {
-          method: "POST",
-          body: query,
-          headers: { "Content-Type": "text/plain" }
-        });
-        if (!response.ok) throw new Error("Errore nella risposta Overpass");
-        const data = await response.json();
+        try {
+          const response = await fetch(OVERPASS_URL, {
+            method: "POST",
+            body: query,
+            headers: { "Content-Type": "text/plain" },
+          });
+          if (!response.ok) throw new Error("Errore nella risposta Overpass");
+          const data = await response.json();
 
-        // Estrai solo località con tag "name"
-        const places = data.elements
-          .filter(el => el.tags && el.tags.name)
-          .map(el => ({
-            name: el.tags.name,
-            lat:  el.lat,
-            lon:  el.lon
+          // Estrai solo località con tag "name"
+          const places = data.elements
+            .filter((el) => el.tags && el.tags.name)
+            .map((el) => ({
+              name: el.tags.name,
+              lat: el.lat,
+              lon: el.lon,
+            }));
+
+          if (places.length === 0) {
+            showError(`Nessuna località trovata entro ${radiusKm} km.`);
+            document.getElementById("overpass-loading").style.display = "none";
+            return;
+          }
+
+          // Calcolo distanza per ciascuna località
+          const placesWithDist = places.map((p) => ({
+            ...p,
+            distance: haversineDistance(userLat, userLon, p.lat, p.lon),
           }));
 
-        if (places.length === 0) {
-          showError(`Nessuna località trovata entro ${radiusKm} km.`);
+          // Ordino per distanza crescente
+          placesWithDist.sort((a, b) => a.distance - b.distance);
+
+          // Processa meteo per tutte le località trovate
+          processWeatherForPlaces(placesWithDist);
+        } catch (err) {
+          console.error(err);
+          showError(
+            "Errore durante la ricerca delle località. Riprova più tardi."
+          );
           document.getElementById("overpass-loading").style.display = "none";
+        }
+      }
+
+      // ================================
+      // 5) PER OGNI LOCALITÀ: RECUPERA METEO
+      // ================================
+      async function processWeatherForPlaces(placesArray) {
+        const promises = placesArray.map((p) => fetchWeatherForPlace(p));
+        const results = await Promise.all(promises);
+
+        const placesWithWeather = results.filter((item) => item !== null);
+        allPlacesWithWeather = placesWithWeather;
+
+        document.getElementById("overpass-loading").style.display = "none";
+        if (placesWithWeather.length === 0) {
+          showError("Impossibile recuperare il meteo per le località vicine.");
           return;
         }
 
-        // Calcolo distanza per ciascuna località
-        const placesWithDist = places.map(p => ({
-          ...p,
-          distance: haversineDistance(userLat, userLon, p.lat, p.lon)
-        }));
-
-        // Ordino per distanza crescente
-        placesWithDist.sort((a, b) => a.distance - b.distance);
-
-        // Mostro tutte le località trovate (senza limiti)
-        processWeatherForPlaces(placesWithDist);
-      } catch (err) {
-        console.error(err);
-        showError("Errore durante la ricerca delle località. Riprova più tardi.");
-        document.getElementById("overpass-loading").style.display = "none";
-      }
-    }
-
-    // ================================
-    // 5) PER OGNI LOCALITÀ: METEO (senza filtro iniziale)
-    // ================================
-    async function processWeatherForPlaces(placesArray) {
-      const promises = placesArray.map(p => fetchWeatherForPlace(p));
-      const results  = await Promise.all(promises);
-
-      // Rimuovo eventuali risposte null (se il fetch meteo è fallito)
-      const placesWithWeather = results.filter(item => item !== null);
-
-      allPlacesWithWeather = placesWithWeather; // memorizzo globalmente
-
-      document.getElementById("overpass-loading").style.display = "none";
-      if (placesWithWeather.length === 0) {
-        showError("Impossibile recuperare il meteo per le località vicine.");
-        return;
+        // Mostro i filtri e i risultati
+        document.getElementById("filterSection").style.display = "flex";
+        renderResults(allPlacesWithWeather);
       }
 
-      // Rendo visibile la sezione filtri
-      document.getElementById("filterSection").style.display = "flex";
+      // ================================
+      // 6) FETCH METEO DI UNA LOCALITÀ
+      // ================================
+      async function fetchWeatherForPlace(place) {
+        const url = `${WEATHER_API_URL}?lat=${place.lat}&lon=${place.lon}&units=metric&lang=it&appid=${OPENWEATHERMAP_API_KEY}`;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error("Errore rete meteo");
+          const data = await resp.json();
+          const temp = data.main.temp;
+          const description = data.weather[0].description;
+          const main = data.weather[0].main; // "Clear", "Clouds", "Rain", etc.
 
-      // Mostro inizialmente tutte le località
-      renderResults(allPlacesWithWeather);
-    }
-
-    // ================================
-    // 6) FETCH METEO DI UNA LOCALITÀ
-    // ================================
-    async function fetchWeatherForPlace(place) {
-      const url = `${WEATHER_API_URL}?lat=${place.lat}&lon=${place.lon}&units=metric&lang=it&appid=${OPENWEATHERMAP_API_KEY}`;
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error("Errore rete meteo");
-        const data = await resp.json();
-        const temp        = data.main.temp;
-        const description = data.weather[0].description;
-        const main        = data.weather[0].main; // "Clear", "Clouds", "Rain", etc.
-
-        return {
-          name:     place.name,
-          distance: parseFloat(place.distance.toFixed(2)), // km con 2 decimali
-          weather:  description,                            // es. “poche nuvole”
-          temp:     temp,                                   // in °C
-          main:     main,                                   // condizione principale
-          lat:      place.lat,
-          lon:      place.lon
-        };
-      } catch (err) {
-        console.warn(`Errore meteo per ${place.name}:`, err);
-        return null;
-      }
-    }
-
-    // ================================
-    // 7) RENDERING DELLA LISTA
-    // ================================
-    function renderResults(list) {
-      const container = document.getElementById("results");
-      container.innerHTML = "";
-
-      if (list.length === 0) {
-        container.innerHTML = "<p>Nessuna località corrisponde al filtro selezionato.</p>";
-        return;
+          return {
+            name: place.name,
+            distance: parseFloat(place.distance.toFixed(2)),
+            weather: description,
+            temp: temp,
+            main: main,
+            lat: place.lat,
+            lon: place.lon,
+          };
+        } catch (err) {
+          console.warn(`Errore meteo per ${place.name}:`, err);
+          return null;
+        }
       }
 
-      // list è già ordinata per distanza crescente
-      list.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
+      // ================================
+      // 7) RENDERING DELLA LISTA CON MAPPA EMBED
+      // ================================
+      function renderResults(list) {
+        const container = document.getElementById("results");
+        container.innerHTML = "";
 
-        // HEADER: nome località + distanza
-        const header = document.createElement("div");
-        header.className = "card-header";
-        header.innerHTML = `
-          <span>${item.name}</span>
-          <span>${item.distance} km</span>
-        `;
-        card.appendChild(header);
+        if (list.length === 0) {
+          container.innerHTML =
+            "<p>Nessuna località corrisponde al filtro selezionato.</p>";
+          return;
+        }
 
-        // BODY: meteo (temperatura e descrizione) e link “Scopri cose da fare”
-        const body = document.createElement("div");
-        body.className = "card-body";
-        body.innerHTML = `
-          <p><strong>Temperatura:</strong> ${item.temp.toFixed(1)}°C</p>
-          <p><strong>Condizioni meteo:</strong> ${item.weather}</p>
-          <a href="https://www.google.com/maps/search/cose+da+fare+a+${encodeURIComponent(item.name)}" target="_blank">
-            Scopri cose da fare a ${item.name}
-          </a>
-        `;
-        card.appendChild(body);
+        // LIMITIAMO A 20
+        const limitedList = list.slice(0, 20);
 
-        container.appendChild(card);
+        limitedList.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          const header = document.createElement("div");
+          header.className = "card-header";
+          header.innerHTML = `
+      <span>${item.name}</span>
+      <span>${item.distance} km</span>
+    `;
+          card.appendChild(header);
+
+          const body = document.createElement("div");
+          body.className = "card-body";
+
+          const mapQuery = encodeURIComponent(`cose da fare a ${item.name}`);
+          const iframeSrc =
+            `https://www.google.com/maps/embed/v1/search?key=${GOOGLE_MAPS_EMBED_KEY}` +
+            `&q=${mapQuery}` +
+            `&center=${item.lat},${item.lon}` +
+            `&zoom=13`;
+
+          // Imposta direttamente gli elementi DOM, non solo con innerHTML
+          const tempP = document.createElement("p");
+          tempP.innerHTML = `<strong>Temperatura:</strong> ${item.temp.toFixed(
+            1
+          )}°C`;
+
+          const meteoP = document.createElement("p");
+          meteoP.innerHTML = `<strong>Condizioni meteo:</strong> ${item.weather}`;
+
+          const iframe = document.createElement("iframe");
+          iframe.className = "map-iframe";
+          iframe.src = iframeSrc;
+          iframe.setAttribute("allowfullscreen", "");
+
+          const btn = document.createElement("button");
+          btn.className = "show-poi-btn";
+          btn.id = `btn-poi-${sanitizeId(item.name)}`;
+          btn.textContent = "Mostra cose da fare";
+
+          const ul = document.createElement("ul");
+          ul.className = "poi-list";
+          ul.id = `poi-list-${sanitizeId(item.name)}`;
+          ul.style.display = "none";
+
+          // ✅ Listener FUNZIONANTE
+          btn.addEventListener("click", () => {
+            togglePoiList(item.name, item.lat, item.lon, item.main);
+          });
+
+          body.appendChild(tempP);
+          body.appendChild(meteoP);
+          body.appendChild(iframe);
+          body.appendChild(btn);
+          body.appendChild(ul);
+          card.appendChild(body);
+          container.appendChild(card);
+        });
+      }
+
+      // ================================
+      // 8) FUNZIONE PER MOSTRA/NASCONDI E CARICAMENTO POI
+      // ================================
+      async function togglePoiList(placeName, lat, lon, main) {
+        const listId = `poi-list-${sanitizeId(placeName)}`;
+        const btnId = `btn-poi-${sanitizeId(placeName)}`;
+        const listEl = document.getElementById(listId);
+        const btnEl = document.getElementById(btnId);
+
+        if (!listEl || !btnEl) return;
+
+        const isVisible = listEl.style.display === "block";
+
+        if (isVisible) {
+          listEl.style.display = "none";
+          btnEl.textContent = "Mostra cose da fare";
+        } else {
+          listEl.style.display = "block";
+          btnEl.textContent = "Nascondi cose da fare";
+
+          // Se non è già stato caricato, avviamo la fetch "by weather"
+          if (
+            !listEl.hasChildNodes() ||
+            listEl.innerHTML.includes("Caricamento")
+          ) {
+            listEl.innerHTML = "<li>Caricamento in corso…</li>";
+            // → uso “main” esattamente come quarto argomento
+            await fetchPoiListByWeather(placeName, lat, lon, main);
+          }
+        }
+      }
+
+      // ================================
+      // [AGGIUNTA] 5) FETCH POI “BY WEATHER”
+      // ================================
+      async function fetchPoiListByWeather(placeName, lat, lon, mainCond) {
+        const listElement = document.getElementById(
+          `poi-list-${sanitizeId(placeName)}`
+        );
+
+        // 1) Decido i "type" in base al meteo
+        const typesArray = getTypesForWeather(mainCond);
+        const radiusMeters = 5000; // 5 km
+
+        // 2) Effettuo tante richieste parallele al Worker per ciascun type
+        const proxyBase = "https://plsaces-proxy.andreaschwarz-a-d.workers.dev";
+        const fetchPromises = typesArray.map((type) => {
+          const url =
+            `${proxyBase}` +
+            `?location=${lat},${lon}` +
+            `&radius=${radiusMeters}` +
+            `&type=${type}`;
+          return fetch(url)
+            .then((resp) => {
+              if (!resp.ok) throw new Error(`Errore Worker ${resp.status}`);
+              return resp.json();
+            })
+            .then((json) => json.results || [])
+            .catch((err) => {
+              console.warn(`Errore fetch type=${type}:`, err);
+              return [];
+            });
+        });
+
+        // 3) Unisco tutte le risposte in un unico array
+        const arrayOfResults = await Promise.all(fetchPromises);
+        const flatPois = arrayOfResults.flat();
+
+        // 4) Elimino duplicati (stesso place_id)
+        const uniquePois = flatPois.filter(
+          (p, idx, self) =>
+            self.findIndex((x) => x.place_id === p.place_id) === idx
+        );
+
+        // 5) Mostro i primi 5 (o quanti vuoi)
+        listElement.innerHTML = "";
+        if (uniquePois.length === 0) {
+          listElement.innerHTML = "<li>Nessuna informazione disponibile.</li>";
+          return;
+        }
+
+        uniquePois.slice(0, 5).forEach((place) => {
+          const li = document.createElement("li");
+          li.textContent = place.name;
+          li.setAttribute("data-placeid", place.place_id);
+
+          // Eventuale dettaglio a clic: lasciamolo se vogliamo mantenere i dettagli
+          const detailDiv = document.createElement("div");
+          detailDiv.className = "place-details";
+          detailDiv.id = `details-${place.place_id}`;
+          detailDiv.innerHTML = "<em>Caricamento dettagli…</em>";
+          li.appendChild(detailDiv);
+
+          li.addEventListener("click", async () => {
+            const pd = document.getElementById(`details-${place.place_id}`);
+            if (pd.style.display === "block") {
+              pd.style.display = "none";
+            } else {
+              if (pd.getAttribute("data-loaded") !== "true") {
+                await fetchPlaceDetails(place.place_id);
+              }
+              pd.style.display = "block";
+            }
+          });
+
+          listElement.appendChild(li);
+        });
+      }
+
+      // ================================
+      // 9) RICHIESTA “COSE DA FARE” (Places Text Search)
+      // ================================
+      async function fetchPoiList(placeName, lat, lon) {
+        const ultraQuery = encodeURIComponent(`cose da fare a ${placeName}`);
+        const radiusMeters = 5000; // 5 km di raggio per la ricerca di POI
+        // URL della Places Text Search API
+        const url =
+          `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+          `?query=${ultraQuery}` +
+          `&location=${lat},${lon}` +
+          `&radius=${radiusMeters}` +
+          `&key=${GOOGLE_PLACES_API_KEY}`;
+
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error("Errore Places API");
+          const data = await resp.json();
+          const results = data.results || [];
+          // Prendiamo solo i primi 5 risultati
+          const top5 = results.slice(0, 5);
+
+          const listElement = document.getElementById(
+            `poi-list-${sanitizeId(placeName)}`
+          );
+          listElement.innerHTML = ""; // svuoto “Caricamento in corso…”
+
+          if (top5.length === 0) {
+            listElement.innerHTML =
+              "<li>Nessuna informazione disponibile.</li>";
+            return;
+          }
+
+          top5.forEach((place) => {
+            const li = document.createElement("li");
+            // Nome del luogo (clickable)
+            li.textContent = place.name;
+            // Memorizzo place_id come attributo data
+            li.setAttribute("data-placeid", place.place_id);
+            // Aggiungo un contenitore per i dettagli (invisibile all’inizio)
+            const detailDiv = document.createElement("div");
+            detailDiv.className = "place-details";
+            detailDiv.id = `details-${place.place_id}`;
+            detailDiv.innerHTML = "<em>Caricamento dettagli…</em>";
+            // Appendo detailDiv sotto li
+            li.appendChild(detailDiv);
+
+            // Listener sul click per mostrare/nascondere dettagli
+            li.addEventListener("click", async () => {
+              const pd = document.getElementById(`details-${place.place_id}`);
+              if (pd.style.display === "block") {
+                pd.style.display = "none";
+              } else {
+                // Se non è stato caricato, fetch dettagli
+                if (pd.getAttribute("data-loaded") !== "true") {
+                  await fetchPlaceDetails(place.place_id);
+                }
+                pd.style.display = "block";
+              }
+            });
+
+            listElement.appendChild(li);
+          });
+        } catch (err) {
+          console.warn(`Errore recupero POI per ${placeName}:`, err);
+          const listElement = document.getElementById(
+            `poi-list-${sanitizeId(placeName)}`
+          );
+          if (listElement) {
+            listElement.innerHTML =
+              "<li>Errore nel caricamento delle “cose da fare”.</li>";
+          }
+        }
+      }
+
+      // ================================
+      // 10) FETCH DETTAGLI DI UN LUOGO (Places Details API)
+      // ================================
+      async function fetchPoiList(placeName, lat, lon) {
+        const ultraQuery = encodeURIComponent(`cose da fare a ${placeName}`);
+        const radiusMeters = 5000; // 5 km di raggio per la ricerca di POI
+
+        // URL del tuo Worker appena deployato:
+        const proxyBase = "https://plsaces-proxy.andreaschwarz-a-d.workers.dev";
+        const url =
+          `${proxyBase}` +
+          `?query=${ultraQuery}` +
+          `&location=${lat},${lon}` +
+          `&radius=${radiusMeters}`;
+        // NOTA: non mettiamo "&key=…" qui perché la chiave è già gestita dal Worker.
+
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`Errore dal Worker: ${resp.status}`);
+          const data = await resp.json();
+          const results = data.results || [];
+
+          const listElement = document.getElementById(
+            `poi-list-${sanitizeId(placeName)}`
+          );
+          listElement.innerHTML = ""; // Svuota “Caricamento in corso…”
+
+          if (results.length === 0) {
+            listElement.innerHTML =
+              "<li>Nessuna informazione disponibile.</li>";
+            return;
+          }
+
+          // Mostriamo solo i primi 5 risultati
+          results.slice(0, 5).forEach((place) => {
+            const li = document.createElement("li");
+            li.textContent = place.name;
+            li.setAttribute("data-placeid", place.place_id);
+
+            // Dettagli nascosti inizialmente
+            const detailDiv = document.createElement("div");
+            detailDiv.className = "place-details";
+            detailDiv.id = `details-${place.place_id}`;
+            detailDiv.innerHTML = "<em>Caricamento dettagli…</em>";
+            li.appendChild(detailDiv);
+
+            li.addEventListener("click", async () => {
+              const pd = document.getElementById(`details-${place.place_id}`);
+              if (pd.style.display === "block") {
+                pd.style.display = "none";
+              } else {
+                if (pd.getAttribute("data-loaded") !== "true") {
+                  await fetchPlaceDetails(place.place_id);
+                }
+                pd.style.display = "block";
+              }
+            });
+
+            listElement.appendChild(li);
+          });
+        } catch (err) {
+          console.warn(`Errore recupero POI per ${placeName}:`, err);
+          const listElement = document.getElementById(
+            `poi-list-${sanitizeId(placeName)}`
+          );
+          if (listElement) {
+            listElement.innerHTML =
+              "<li>Errore nel caricamento delle “cose da fare”.</li>";
+          }
+        }
+      }
+
+      // ================================
+      // 11) CALCOLO DISTANZA (Haversine)
+      // ================================
+      function deg2rad(deg) {
+        return deg * (Math.PI / 180);
+      }
+      function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // raggio della Terra in km
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(deg2rad(lat1)) *
+            Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      // ================================
+      // 12) FILTRI METEO
+      // ================================
+      document.getElementById("btn-all").addEventListener("click", () => {
+        renderResults(allPlacesWithWeather);
       });
-    }
+      document.getElementById("btn-clear").addEventListener("click", () => {
+        const filtered = allPlacesWithWeather.filter(
+          (item) => item.main === "Clear"
+        );
+        renderResults(filtered);
+      });
+      document.getElementById("btn-clouds").addEventListener("click", () => {
+        const filtered = allPlacesWithWeather.filter(
+          (item) => item.main === "Clouds"
+        );
+        renderResults(filtered);
+      });
+      document.getElementById("btn-rain").addEventListener("click", () => {
+        const filtered = allPlacesWithWeather.filter(
+          (item) => item.main === "Rain"
+        );
+        renderResults(filtered);
+      });
+      document.getElementById("btn-snow").addEventListener("click", () => {
+        const filtered = allPlacesWithWeather.filter(
+          (item) => item.main === "Snow"
+        );
+        renderResults(filtered);
+      });
+      document.getElementById("btn-other").addEventListener("click", () => {
+        const filtered = allPlacesWithWeather.filter(
+          (item) => !["Clear", "Clouds", "Rain", "Snow"].includes(item.main)
+        );
+        renderResults(filtered);
+      });
 
-    // ================================
-    // 8) CALCOLO DISTANZA (Haversine)
-    // ================================
-    function deg2rad(deg) {
-      return deg * (Math.PI / 180);
-    }
-    function haversineDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // raggio della Terra in km
-      const dLat = deg2rad(lat2 - lat1);
-      const dLon = deg2rad(lon2 - lon1);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
+      // ================================
+      // 13) MESSAGGI DI ERRORE
+      // ================================
+      function showError(msg) {
+        document.getElementById("error").textContent = msg;
+      }
+      function clearMessages() {
+        document.getElementById("error").textContent = "";
+        document.getElementById("results").innerHTML = "";
+      }
 
-    // ================================
-    // 9) GESTIONE FILTRI METEO
-    // ================================
-    document.getElementById("btn-all").addEventListener("click", () => {
-      renderResults(allPlacesWithWeather);
-    });
-    document.getElementById("btn-clear").addEventListener("click", () => {
-      const filtered = allPlacesWithWeather.filter(item => item.main === "Clear");
-      renderResults(filtered);
-    });
-    document.getElementById("btn-clouds").addEventListener("click", () => {
-      const filtered = allPlacesWithWeather.filter(item => item.main === "Clouds");
-      renderResults(filtered);
-    });
-    document.getElementById("btn-rain").addEventListener("click", () => {
-      const filtered = allPlacesWithWeather.filter(item => item.main === "Rain");
-      renderResults(filtered);
-    });
-    document.getElementById("btn-snow").addEventListener("click", () => {
-      const filtered = allPlacesWithWeather.filter(item => item.main === "Snow");
-      renderResults(filtered);
-    });
-    document.getElementById("btn-other").addEventListener("click", () => {
-      const filtered = allPlacesWithWeather.filter(item =>
-        !["Clear", "Clouds", "Rain", "Snow"].includes(item.main)
-      );
-      renderResults(filtered);
-    });
+      // ================================
+      // 14) AVVIO DELL’APP
+      // ================================
+      window.addEventListener("load", () => {
+        getUserLocation();
+      });
 
-    // ================================
-    // 10) GESTIONE MESSAGGI DI ERRORE
-    // ================================
-    function showError(msg) {
-      document.getElementById("error").textContent = msg;
-    }
-    function clearMessages() {
-      document.getElementById("error").textContent = "";
-      document.getElementById("results").innerHTML = "";
-    }
-
-    // ================================
-    // 11) AVVIO DELL’APP: chiediamo sempre
-    // ================================
-    window.addEventListener("load", () => {
-      getUserLocation();
-    });
-  </script>
-</body>
+      // ================================
+      // 15) UTILITY: crea ID HTML sicuro da nome di località
+      // ================================
+      function sanitizeId(str) {
+        return str.replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
+      }
+    </script>
+  </body>
 </html>
