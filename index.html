@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Località con Meteo Vicine a Te</title>
+  <style>
+    /* Reset base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    header {
+      background: #0275d8;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 1.5rem;
+    }
+    main {
+      max-width: 800px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+    .input-container {
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .input-container label {
+      font-weight: bold;
+    }
+    .input-container input[type="number"] {
+      width: 80px;
+      margin-left: 0.5rem;
+      margin-right: 1rem;
+      padding: 0.25rem;
+    }
+    .input-container button {
+      padding: 0.5rem 1rem;
+      background: #0275d8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .input-container button:hover {
+      background: #025aa5;
+    }
+    #loading, #overpass-loading {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
+    #error {
+      color: red;
+      text-align: center;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    .card {
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .card-header {
+      background: #eee;
+      padding: 0.75rem 1rem;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-body {
+      padding: 1rem;
+    }
+    .card-body p {
+      margin-bottom: 0.5rem;
+    }
+    .card-body a {
+      display: inline-block;
+      margin-top: 0.5rem;
+      text-decoration: none;
+      color: #0275d8;
+    }
+    .card-body a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Località con Meteo Vicine a Te</h1>
+  </header>
+
+  <main>
+    <!-- Messaggio iniziale in attesa di posizione -->
+    <div id="loading">Sto rilevando la tua posizione…</div>
+    <div id="error"></div>
+
+    <!-- Form per inserire il raggio di ricerca (in km) -->
+    <div id="inputSection" class="input-container" style="display: none;">
+      <label for="radius">Raggio di ricerca (km):</label>
+      <input id="radius" type="number" value="50" min="1" max="200" />
+      <button id="searchBtn">Cerca</button>
+    </div>
+
+    <!-- Messaggio di caricamento Overpass -->
+    <div id="overpass-loading" style="display: none;">Sto cercando località vicine…</div>
+
+    <!-- Contenitore risultati -->
+    <div id="results"></div>
+  </main>
+
+  <footer>
+    &copy; 2025 • Demo “Località con Meteo”
+  </footer>
+
+  <script>
+    // ================================
+    // 1) CONFIGURAZIONE INIZIALE
+    // ================================
+    const OPENWEATHERMAP_API_KEY = "05801df6ce78bcc792e3a3dd95dab0a9";
+    const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
+    const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+    const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse?format=json";
+
+    let userLat = null, userLon = null, userName = "La tua posizione";
+
+    // ================================
+    // 2) RILEVAZIONE POSIZIONE
+    // ================================
+    function getUserLocation() {
+      if (!navigator.geolocation) {
+        showError("Geolocalizzazione non supportata dal browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async position => {
+          userLat = position.coords.latitude;
+          userLon = position.coords.longitude;
+          // Ottieni nome località con reverse geocoding
+          await fetchUserLocationName();
+          // Nascondi "Sto rilevando…" e mostra il form
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("inputSection").style.display = "block";
+        },
+        err => {
+          showError("Impossibile ottenere la posizione: " + err.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000
+        }
+      );
+    }
+
+    // ================================
+    // 2.bis) REVERSE GEOCODING CON NOMINATIM
+    // ================================
+    async function fetchUserLocationName() {
+      try {
+        const resp = await fetch(`${NOMINATIM_URL}&lat=${userLat}&lon=${userLon}`);
+        if (!resp.ok) throw new Error("Errore reverse geocoding");
+        const data = await resp.json();
+        // Preferiamo city/town/village, altrimenti display_name
+        if (data.address) {
+          userName =
+            data.address.city ||
+            data.address.town ||
+            data.address.village ||
+            data.display_name ||
+            userName;
+        }
+      } catch (err) {
+        console.warn("Reverse geocoding fallito, userName rimane generico.", err);
+      }
+    }
+
+    // ================================
+    // 3) GESTIONE CLICK “Cerca”
+    // ================================
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const radiusKm = parseInt(document.getElementById("radius").value);
+      if (isNaN(radiusKm) || radiusKm < 1) {
+        showError("Inserisci un raggio da 1 a 200 km.");
+        return;
+      }
+      clearMessages();
+      searchNearbyPlaces(radiusKm);
+    });
+
+    // ================================
+    // 4) CERCA LOCALITÀ VICINE (Overpass)
+    // ================================
+    async function searchNearbyPlaces(radiusKm) {
+      document.getElementById("overpass-loading").style.display = "block";
+      document.getElementById("results").innerHTML = "";
+
+      const radiusM = radiusKm * 1000;
+      const query = `
+        [out:json][timeout:25];
+        (
+          node["place"~"city|town|village"](around:${radiusM},${userLat},${userLon});
+        );
+        out center;
+      `.trim();
+
+      try {
+        const response = await fetch(OVERPASS_URL, {
+          method: "POST",
+          body: query,
+          headers: { "Content-Type": "text/plain" }
+        });
+        if (!response.ok) throw new Error("Errore nella risposta Overpass");
+        const data = await response.json();
+
+        // Estrai solo località con tag "name"
+        const places = data.elements
+          .filter(el => el.tags && el.tags.name)
+          .map(el => ({
+            name: el.tags.name,
+            lat: el.lat,
+            lon: el.lon
+          }));
+
+        if (places.length === 0) {
+          showError(`Nessuna località trovata entro ${radiusKm} km.`);
+          document.getElementById("overpass-loading").style.display = "none";
+          return;
+        }
+
+        // Calcolo distanza per ciascuna località
+        const placesWithDist = places.map(p => ({
+          ...p,
+          distance: haversineDistance(userLat, userLon, p.lat, p.lon)
+        }));
+
+        // Ordino per distanza crescente
+        placesWithDist.sort((a, b) => a.distance - b.distance);
+
+        // Creo array contenente prima la tua posizione e poi le prime 9 località vicine
+        // (se non ci sono almeno 9, prendo comunque quante ne trovo)
+        const nearestLocalities = [
+          { name: userName, lat: userLat, lon: userLon, distance: 0 },
+          ...placesWithDist.slice(0, 9)
+        ];
+
+        // Ora recupero il meteo per ciascuna di queste località
+        processWeatherForPlaces(nearestLocalities);
+      } catch (err) {
+        console.error(err);
+        showError("Errore durante la ricerca delle località. Riprova più tardi.");
+        document.getElementById("overpass-loading").style.display = "none";
+      }
+    }
+
+    // ================================
+    // 5) PER OGNI LOCALITÀ: METEO (senza filtro di temperatura)
+    // ================================
+    async function processWeatherForPlaces(placesArray) {
+      // Faccio una fetch meteo per ciascuna delle località (prima è la tua)
+      const promises = placesArray.map(p => fetchWeatherForPlace(p));
+      const results = await Promise.all(promises);
+
+      // Rimuovo eventuali risposte null (se il fetch meteo è fallito per qualcuno)
+      const placesWithWeather = results
+        .filter(item => item !== null)
+        // Non serve riordinare qui, perché l'array era già ordinato per distanza (0 + le più vicine)
+
+      document.getElementById("overpass-loading").style.display = "none";
+
+      if (placesWithWeather.length === 0) {
+        showError("Impossibile recuperare il meteo per le località vicine.");
+        return;
+      }
+
+      // Rendering finale in ordine di distanza crescente (la tua posizione ha distance=0)
+      renderResults(placesWithWeather);
+    }
+
+    // ================================
+    // 6) FETCH METEO DI UNA LOCALITÀ
+    // ================================
+    async function fetchWeatherForPlace(place) {
+      const url = `${WEATHER_API_URL}?lat=${place.lat}&lon=${place.lon}&units=metric&lang=it&appid=${OPENWEATHERMAP_API_KEY}`;
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Errore rete meteo");
+        const data = await resp.json();
+        const temp = data.main.temp;
+        const description = data.weather[0].description;
+
+        return {
+          name: place.name,
+          distance: parseFloat(place.distance.toFixed(2)), // km con 2 decimali
+          weather: description,                            // es. “poche nuvole”
+          temp: temp,                                      // in °C
+          lat: place.lat,
+          lon: place.lon
+        };
+      } catch (err) {
+        console.warn(`Errore meteo per ${place.name}:`, err);
+        return null;
+      }
+    }
+
+    // ================================
+    // 7) RENDERING DELLA LISTA
+    // ================================
+    function renderResults(list) {
+      const container = document.getElementById("results");
+      container.innerHTML = "";
+
+      // list è ordinata per distanza crescente (la prima posizione è la tua)
+      list.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        // HEADER: nome località + distanza
+        const header = document.createElement("div");
+        header.className = "card-header";
+        header.innerHTML = `
+          <span>${item.name}</span>
+          <span>${item.distance} km</span>
+        `;
+        card.appendChild(header);
+
+        // BODY: meteo (temperatura e descrizione) e link “Scopri cose da fare”
+        const body = document.createElement("div");
+        body.className = "card-body";
+        body.innerHTML = `
+          <p><strong>Temperatura:</strong> ${item.temp.toFixed(1)}°C</p>
+          <p><strong>Condizioni meteo:</strong> ${item.weather}</p>
+          <a href="https://www.google.com/maps/search/cose+da+fare+a+${encodeURIComponent(item.name)}" target="_blank">
+            Scopri cose da fare a ${item.name}
+          </a>
+        `;
+        card.appendChild(body);
+
+        container.appendChild(card);
+      });
+    }
+
+    // ================================
+    // 8) CALCOLO DISTANZA (Haversine)
+    // ================================
+    function deg2rad(deg) {
+      return deg * (Math.PI / 180);
+    }
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // raggio della Terra in km
+      const dLat = deg2rad(lat2 - lat1);
+      const dLon = deg2rad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    // ================================
+    // 9) GESTIONE MESSAGGI DI ERRORE
+    // ================================
+    function showError(msg) {
+      document.getElementById("error").textContent = msg;
+    }
+    function clearMessages() {
+      document.getElementById("error").textContent = "";
+      document.getElementById("results").innerHTML = "";
+    }
+
+    // ================================
+    // 10) AVVIO DELL’APP
+    // ================================
+    window.addEventListener("load", () => {
+      getUserLocation();
+    });
+  </script>
+</body>
+</html>
