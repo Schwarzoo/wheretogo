@@ -16,6 +16,7 @@
       background: #f5f5f5;
       color: #333;
       line-height: 1.6;
+      padding: 0 0.5rem;
     }
     header {
       background: #0275d8;
@@ -29,41 +30,49 @@
     main {
       max-width: 800px;
       margin: 1rem auto;
-      padding: 0 1rem;
+      padding: 0 0.5rem;
     }
-    .input-container, .filter-container {
+    .input-container,
+    .filter-container {
       background: white;
       padding: 1rem;
       border-radius: 6px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
-    .input-container label, .filter-container label {
+    .input-container label,
+    .filter-container label {
       font-weight: bold;
+      flex: 0 0 auto;
     }
     .input-container input[type="number"] {
       width: 80px;
-      margin-left: 0.5rem;
-      margin-right: 1rem;
-      padding: 0.25rem;
+      padding: 0.5rem;
+      flex: 0 0 auto;
     }
-    .input-container button, .filter-container button {
+    .input-container button,
+    .filter-container button {
       padding: 0.5rem 1rem;
       background: #0275d8;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-right: 0.5rem;
+      flex: 0 0 auto;
     }
-    .input-container button:hover, .filter-container button:hover {
+    .input-container button:hover,
+    .filter-container button:hover {
       background: #025aa5;
     }
     #filterSection {
       display: none;
-      margin-top: -0.5rem;
     }
-    #loading, #overpass-loading {
+    #loading,
+    #overpass-loading {
       text-align: center;
       margin-top: 1rem;
       font-size: 1.1rem;
@@ -80,6 +89,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       margin-bottom: 1rem;
       overflow: hidden;
+      width: 100%;
     }
     .card-header {
       background: #eee;
@@ -88,6 +98,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+    }
+    .card-header span {
+      flex: 1 1 auto;
+      margin: 0.25rem 0;
     }
     .card-body {
       padding: 1rem;
@@ -109,6 +124,28 @@
       padding: 1rem;
       font-size: 0.9rem;
       color: #555;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .input-container,
+      .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .input-container input[type="number"],
+      .input-container button,
+      .filter-container button {
+        width: 100%;
+        margin: 0.25rem 0;
+      }
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .card-header span {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -156,8 +193,8 @@
     // 1) CONFIGURAZIONE INIZIALE
     // ================================
     const OPENWEATHERMAP_API_KEY = "05801df6ce78bcc792e3a3dd95dab0a9";
-    const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
-    const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+    const WEATHER_API_URL      = "https://api.openweathermap.org/data/2.5/weather";
+    const OVERPASS_URL         = "https://overpass-api.de/api/interpreter";
 
     let userLat = null, userLon = null;
     let allPlacesWithWeather = []; // Array globale per memorizzare i risultati
@@ -231,8 +268,8 @@
           .filter(el => el.tags && el.tags.name)
           .map(el => ({
             name: el.tags.name,
-            lat: el.lat,
-            lon: el.lon
+            lat:  el.lat,
+            lon:  el.lon
           }));
 
         if (places.length === 0) {
@@ -250,11 +287,8 @@
         // Ordino per distanza crescente
         placesWithDist.sort((a, b) => a.distance - b.distance);
 
-        // Prendo le prime 50 (le più vicine)
-        const nearest50 = placesWithDist.slice(0, 50);
-
-        // Ora recupero il meteo per ciascuna delle prime 50
-        processWeatherForPlaces(nearest50);
+        // Mostro tutte le località trovate (senza limiti)
+        processWeatherForPlaces(placesWithDist);
       } catch (err) {
         console.error(err);
         showError("Errore durante la ricerca delle località. Riprova più tardi.");
@@ -267,7 +301,7 @@
     // ================================
     async function processWeatherForPlaces(placesArray) {
       const promises = placesArray.map(p => fetchWeatherForPlace(p));
-      const results = await Promise.all(promises);
+      const results  = await Promise.all(promises);
 
       // Rimuovo eventuali risposte null (se il fetch meteo è fallito)
       const placesWithWeather = results.filter(item => item !== null);
@@ -297,18 +331,18 @@
         const resp = await fetch(url);
         if (!resp.ok) throw new Error("Errore rete meteo");
         const data = await resp.json();
-        const temp = data.main.temp;
+        const temp        = data.main.temp;
         const description = data.weather[0].description;
-        const main = data.weather[0].main; // "Clear", "Clouds", "Rain", etc.
+        const main        = data.weather[0].main; // "Clear", "Clouds", "Rain", etc.
 
         return {
-          name: place.name,
+          name:     place.name,
           distance: parseFloat(place.distance.toFixed(2)), // km con 2 decimali
-          weather: description,                            // es. “poche nuvole”
-          temp: temp,                                      // in °C
-          main: main,                                      // condizione principale
-          lat: place.lat,
-          lon: place.lon
+          weather:  description,                            // es. “poche nuvole”
+          temp:     temp,                                   // in °C
+          main:     main,                                   // condizione principale
+          lat:      place.lat,
+          lon:      place.lon
         };
       } catch (err) {
         console.warn(`Errore meteo per ${place.name}:`, err);
