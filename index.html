@@ -642,25 +642,69 @@
       }
 
       /* ================================
-         Animazione di comparsa lista POI
+         Animazione di comparsa lista POI e performance
       ================================ */
       .poi-list.fade-in {
-        animation: fadeIn 0.3s ease-in-out forwards;
+        animation: fadeIn 0.4s ease-out forwards;
       }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          max-height: 0;
+      
+      .results-enter {
+        animation: fadeIn 0.6s ease-out forwards;
+      }
+      
+      /* GPU acceleration for better performance */
+      .card,
+      .input-container,
+      .filter-container,
+      .toast {
+        transform: translateZ(0);
+        will-change: transform;
+      }
+      
+      /* Optimize hover effects for touch devices */
+      @media (hover: none) {
+        .card:hover,
+        .input-container:hover,
+        .filter-container:hover {
+          transform: none;
+          box-shadow: initial;
         }
-        to {
-          opacity: 1;
-          max-height: 500px;
+        
+        .poi-list li:hover {
+          background: initial;
+          transform: none;
         }
       }
 
       /* ================================
-         Tooltips
+         Progress indicators
       ================================ */
+      .progress-bar {
+        width: 100%;
+        height: 4px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 1rem;
+      }
+      
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+      
+      .progress-fill.animate {
+        animation: progressFill 3s ease-in-out infinite;
+      }
+      
+      @keyframes progressFill {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+      }
       .tooltip {
         position: relative;
         display: inline-block;
@@ -837,6 +881,9 @@
       <div id="loading">
         <div class="loading-spinner"></div>
         Sto rilevando la tua posizione…
+        <div class="progress-bar">
+          <div class="progress-fill animate"></div>
+        </div>
       </div>
       <div id="error"></div>
 
@@ -1017,12 +1064,15 @@
       // 3) GESTIONE CLICK “Cerca”
       // ================================
       document.getElementById("searchBtn").addEventListener("click", () => {
-        const radiusKm = parseInt(document.getElementById("radius").value);
-        if (isNaN(radiusKm) || radiusKm < 1) {
-          showError("Inserisci un raggio da 1 a 200 km.");
-          showToast("Inserisci un valore valido per il raggio di ricerca", "warning");
+        const radiusValue = document.getElementById("radius").value;
+        const validation = validateRadius(radiusValue);
+        
+        if (!validation.valid) {
+          showError(validation.message);
+          showToast(validation.message, "warning");
           return;
         }
+        
         clearMessages();
         
         // Add loading state to button
@@ -1030,10 +1080,14 @@
         searchBtn.classList.add('loading');
         searchBtn.textContent = "Cercando...";
         
-        searchNearbyPlaces(radiusKm).finally(() => {
-          searchBtn.classList.remove('loading');
-          searchBtn.textContent = "🔎 Cerca";
-        });
+        searchNearbyPlaces(validation.value)
+          .catch((error) => {
+            handleNetworkError(error, "durante la ricerca delle località");
+          })
+          .finally(() => {
+            searchBtn.classList.remove('loading');
+            searchBtn.textContent = "🔎 Cerca";
+          });
       });
 
       // ================================
@@ -1492,8 +1546,34 @@
       });
 
       // ================================
-      // 13) MESSAGGI DI ERRORE
+      // Enhanced error handling and validation
       // ================================
+      function validateRadius(radiusValue) {
+        const radius = parseInt(radiusValue);
+        if (isNaN(radius)) {
+          return { valid: false, message: "Il raggio deve essere un numero" };
+        }
+        if (radius < 1) {
+          return { valid: false, message: "Il raggio deve essere almeno 1 km" };
+        }
+        if (radius > 200) {
+          return { valid: false, message: "Il raggio non può superare 200 km" };
+        }
+        return { valid: true, value: radius };
+      }
+      
+      function handleNetworkError(error, context = "") {
+        console.error(`Network error ${context}:`, error);
+        
+        if (!navigator.onLine) {
+          showToast("Nessuna connessione internet disponibile", "error");
+          showError("Controlla la tua connessione internet e riprova.");
+        } else if (error.name === 'TypeError') {
+          showToast("Errore di rete. Riprova tra qualche momento.", "error");
+        } else {
+          showToast(`Errore: ${error.message}`, "error");
+        }
+      }
       function showError(msg) {
         document.getElementById("error").textContent = msg;
       }
